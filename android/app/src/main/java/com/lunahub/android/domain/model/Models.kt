@@ -92,7 +92,7 @@ data class AppSettings(
     val defaultDownloadFolder: String,
     val watermarkEnabled: Boolean,
     val cacheSize: Long,
-    val dataSourceMode: DataSourceMode = DataSourceMode.Mock,
+    val dataSourceMode: DataSourceMode = DataSourceMode.Real,
     val cameraHost: String = "192.168.42.1",
     val cameraPath: String = "/storage_internal/DCIM/",
 )

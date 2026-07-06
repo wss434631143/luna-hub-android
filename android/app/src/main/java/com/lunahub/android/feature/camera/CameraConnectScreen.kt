@@ -1,5 +1,7 @@
 package com.lunahub.android.feature.camera
 
+import android.content.Intent
+import android.provider.Settings
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -20,6 +22,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -30,6 +33,7 @@ import com.lunahub.android.core.design.LunaLoadingState
 import com.lunahub.android.core.design.LunaPage
 import com.lunahub.android.core.design.LunaPrimaryButton
 import com.lunahub.android.core.design.LunaSectionHeader
+import com.lunahub.android.core.design.LunaSecondaryButton
 import com.lunahub.android.core.design.LunaSpacing
 import com.lunahub.android.core.design.LunaStatusPill
 import com.lunahub.android.core.util.formatBytes
@@ -51,6 +55,7 @@ private fun CameraConnectScreen(
     onScan: () -> Unit,
     onOpenLibrary: () -> Unit,
 ) {
+    val context = LocalContext.current
     LunaPage(title = "连接相机", subtitle = "连接相机 Wi-Fi 后读取机内照片和视频") {
         LazyColumn(
             modifier = Modifier.weight(1f),
@@ -65,7 +70,7 @@ private fun CameraConnectScreen(
                             Text("连接引导", style = MaterialTheme.typography.titleMedium)
                             Text(
                                 if (uiState.mode == DataSourceMode.Real) {
-                                    "先在系统 Wi-Fi 中连接 Luna / Insta360 热点，再返回扫描。"
+                                    "请先连接名称以 Luna 开头的相机 Wi-Fi，再返回这里扫描。"
                                 } else {
                                     "当前为模拟模式，可先体验完整页面流程。"
                                 },
@@ -78,18 +83,31 @@ private fun CameraConnectScreen(
                     if (uiState.mode == DataSourceMode.Real) {
                         Spacer(Modifier.height(8.dp))
                         Text(
+                            "步骤：打开相机无线连接 -> 手机进入 Wi-Fi -> 选择 Luna... 热点 -> 回到 App 点击扫描相机。",
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            style = MaterialTheme.typography.bodyMedium,
+                        )
+                        Spacer(Modifier.height(8.dp))
+                        Text(
                             "目标地址：http://${uiState.cameraHost}${uiState.cameraPath}",
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             style = MaterialTheme.typography.bodyMedium,
                         )
                     }
                     Spacer(Modifier.height(16.dp))
-                    LunaPrimaryButton(
-                        text = if (uiState.isLoading) "扫描中..." else "扫描相机",
-                        onClick = onScan,
-                        enabled = !uiState.isLoading,
-                        modifier = Modifier.fillMaxWidth(),
-                    )
+                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        LunaSecondaryButton(
+                            text = "打开 Wi-Fi",
+                            onClick = { context.startActivity(Intent(Settings.ACTION_WIFI_SETTINGS)) },
+                            modifier = Modifier.weight(1f),
+                        )
+                        LunaPrimaryButton(
+                            text = if (uiState.isLoading) "扫描中..." else "扫描相机",
+                            onClick = onScan,
+                            enabled = !uiState.isLoading,
+                            modifier = Modifier.weight(1f),
+                        )
+                    }
                 }
             }
             if (uiState.isLoading) {

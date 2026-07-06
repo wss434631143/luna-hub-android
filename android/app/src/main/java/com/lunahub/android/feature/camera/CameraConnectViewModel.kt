@@ -22,7 +22,7 @@ data class CameraConnectUiState(
     val isLoading: Boolean = false,
     val errorMessage: String? = null,
     val device: CameraDevice? = null,
-    val mode: DataSourceMode = DataSourceMode.Mock,
+    val mode: DataSourceMode = DataSourceMode.Real,
     val cameraHost: String = "192.168.42.1",
     val cameraPath: String = "/storage_internal/DCIM/",
     val wifiHint: String = "",
@@ -85,8 +85,8 @@ class CameraConnectViewModel @Inject constructor(
                     transient.update {
                         it.copy(
                             isLoading = false,
-                            errorMessage = error.message ?: "扫描失败，请检查相机 Wi-Fi 或稍后重试。",
-                            wifiHint = "相机可能已断连，或当前 Wi-Fi 无法访问 ${current.cameraHost}。",
+                            errorMessage = error.message ?: "扫描失败。请先连接 Luna 开头的相机 Wi-Fi，再点击扫描相机。",
+                            wifiHint = "没有连上真实相机。请打开系统 Wi-Fi，选择 Luna... 开头的热点，回到 App 后重试。",
                         )
                     }
                 }

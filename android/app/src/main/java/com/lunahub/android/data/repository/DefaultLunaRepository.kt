@@ -24,7 +24,7 @@ class DefaultLunaRepository @Inject constructor(
     private val mediaMapper: CameraMediaMapper,
 ) : LunaRepository {
     private val deviceState = MutableStateFlow(mockDevice(ConnectionStatus.Disconnected))
-    private val mediaState = MutableStateFlow(mockMedia())
+    private val mediaState = MutableStateFlow(emptyList<CameraMedia>())
     private val settingsState = MutableStateFlow(
         AppSettings(
             themeMode = ThemeMode.System,
@@ -32,7 +32,7 @@ class DefaultLunaRepository @Inject constructor(
             defaultDownloadFolder = "Pictures/Luna Hub",
             watermarkEnabled = true,
             cacheSize = 186L * 1024 * 1024,
-            dataSourceMode = DataSourceMode.Mock,
+            dataSourceMode = DataSourceMode.Real,
         ),
     )
 
@@ -95,13 +95,21 @@ class DefaultLunaRepository @Inject constructor(
             )
         }
         return try {
-            val status = remoteDataSource.checkStatus(settings.cameraHost, settings.cameraPath)
+            val paths = listOf(settings.cameraPath, "/DCIM/").distinct()
+            val connectedPath = paths.firstOrNull { path ->
+                remoteDataSource.checkStatus(settings.cameraHost, path).httpOk
+            } ?: run {
+                val failed = deviceState.value.copy(connectionStatus = ConnectionStatus.Failed)
+                deviceState.value = failed
+                throw IllegalStateException("未检测到相机媒体服务。请确认手机已连接 Luna 开头的相机 Wi-Fi，并保持相机屏幕唤醒。")
+            }
+            val status = remoteDataSource.checkStatus(settings.cameraHost, connectedPath)
             if (!status.httpOk) {
                 val failed = deviceState.value.copy(connectionStatus = ConnectionStatus.Failed)
                 deviceState.value = failed
                 throw IllegalStateException(status.message)
             }
-            val remoteMedia = remoteDataSource.listMedia(settings.cameraHost, settings.cameraPath)
+            val remoteMedia = remoteDataSource.listMedia(settings.cameraHost, connectedPath)
             mediaState.value = remoteMedia.map(mediaMapper::fromRemote)
             val connected = deviceState.value.copy(
                 name = "Luna Ultra",
