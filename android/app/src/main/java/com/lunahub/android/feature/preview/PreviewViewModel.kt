@@ -51,6 +51,6 @@ class PreviewViewModel @Inject constructor(
     }
 
     fun exportPlaceholder() {
-        mutableUiState.update { it.copy(actionMessage = "水印导出将在第五阶段接入") }
+        mutableUiState.update { it.copy(actionMessage = "导出到手机相册将在后续版本接入") }
     }
 }

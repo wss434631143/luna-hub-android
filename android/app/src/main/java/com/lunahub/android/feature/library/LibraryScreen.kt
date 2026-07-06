@@ -45,6 +45,7 @@ fun LibraryRoute(
         onMediaLongClick = { viewModel.toggleSelection(it.id) },
         onClearSelection = viewModel::clearSelection,
         onDownloadSelected = viewModel::downloadSelected,
+        onSelect = viewModel::enterSelectionMode,
     )
 }
 
@@ -56,16 +57,23 @@ private fun LibraryScreen(
     onMediaLongClick: (CameraMedia) -> Unit,
     onClearSelection: () -> Unit,
     onDownloadSelected: () -> Unit,
+    onSelect: () -> Unit,
 ) {
     LunaPage(
-        title = if (uiState.selectionMode) "已选择 ${uiState.selectedIds.size} 项" else "相机素材库",
-        subtitle = "按日期浏览相机中的照片和视频",
+        title = if (uiState.selectionMode) "已选择 ${uiState.selectedIds.size} 项" else "相机相册",
+        subtitle = if (uiState.selectionMode) "选择素材后可下载到 App，后续支持导出到手机相册" else "按日期浏览相机中的照片和视频",
     ) {
         when {
             uiState.isLoading -> LunaLoadingState()
             uiState.errorMessage != null -> LunaErrorState(uiState.errorMessage) {}
-            uiState.media.isEmpty() -> LunaEmptyState("素材库是空的", "连接相机并扫描后，照片和视频会按日期整理在这里")
+            uiState.media.isEmpty() -> LunaEmptyState("相机相册是空的", "先连接 Luna 开头的相机 Wi-Fi，再扫描相机读取照片和视频")
             else -> {
+                LunaSectionHeader(
+                    title = "相机文件",
+                    action = if (uiState.selectionMode) "完成" else "选择",
+                    onAction = if (uiState.selectionMode) onClearSelection else onSelect,
+                )
+                Spacer(Modifier.height(10.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     MediaFilter.entries.forEach { filter ->
                         FilterChip(
@@ -86,9 +94,11 @@ private fun LibraryScreen(
                 if (uiState.selectionMode) {
                     Spacer(Modifier.height(10.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        LunaPrimaryButton("下载所选", onDownloadSelected, Modifier.weight(1f))
+                        LunaPrimaryButton("下载到 App", onDownloadSelected, Modifier.weight(1f), enabled = uiState.selectedIds.isNotEmpty())
                         LunaPrimaryButton("取消选择", onClearSelection, Modifier.weight(1f))
                     }
+                    Spacer(Modifier.height(8.dp))
+                    Text("提示：下载会保存到 Luna Hub 本地相册；导出到系统相册将在后续版本接入。", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodyMedium)
                 }
                 if (uiState.message != null) {
                     Spacer(Modifier.height(8.dp))
@@ -119,7 +129,7 @@ private fun LibraryScreen(
                     }
                 }
                 if (uiState.filteredMedia.isEmpty()) {
-                    Text("当前筛选没有素材", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text("当前筛选没有素材，可以切换到“全部”查看。", color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
         }

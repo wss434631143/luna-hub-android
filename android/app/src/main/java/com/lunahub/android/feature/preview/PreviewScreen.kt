@@ -126,8 +126,8 @@ private fun PreviewContent(
         }
         item {
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                LunaPrimaryButton("下载", onDownload, Modifier.weight(1f))
-                LunaSecondaryButton("导出", onExport, Modifier.weight(1f))
+                LunaPrimaryButton("下载到 App", onDownload, Modifier.weight(1f))
+                LunaSecondaryButton("导出到手机", onExport, Modifier.weight(1f))
             }
         }
     }

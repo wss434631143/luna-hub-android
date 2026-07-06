@@ -23,6 +23,7 @@ data class LibraryUiState(
     val filter: MediaFilter = MediaFilter.All,
     val media: List<CameraMedia> = emptyList(),
     val selectedIds: Set<String> = emptySet(),
+    val selecting: Boolean = false,
     val message: String? = null,
 ) {
     val filteredMedia: List<CameraMedia> = media.filter {
@@ -30,7 +31,7 @@ data class LibraryUiState(
             (filter == MediaFilter.Photo && it.mediaType == MediaType.Photo) ||
             (filter == MediaFilter.Video && it.mediaType == MediaType.Video)
     }
-    val selectionMode: Boolean = selectedIds.isNotEmpty()
+    val selectionMode: Boolean = selecting || selectedIds.isNotEmpty()
 }
 
 @HiltViewModel
@@ -48,6 +49,10 @@ class LibraryViewModel @Inject constructor(
         controls.update { it.copy(filter = filter) }
     }
 
+    fun enterSelectionMode() {
+        controls.update { it.copy(selecting = true, message = "请选择要下载或导出的素材") }
+    }
+
     fun toggleSelection(mediaId: String) {
         controls.update { state ->
             val next = state.selectedIds.toMutableSet()
@@ -57,7 +62,7 @@ class LibraryViewModel @Inject constructor(
     }
 
     fun clearSelection() {
-        controls.update { it.copy(selectedIds = emptySet()) }
+        controls.update { it.copy(selectedIds = emptySet(), selecting = false, message = null) }
     }
 
     fun downloadSelected() {
@@ -65,7 +70,7 @@ class LibraryViewModel @Inject constructor(
         if (selected.isEmpty()) return
         viewModelScope.launch {
             startBatchDownload(selected)
-            controls.update { it.copy(selectedIds = emptySet(), message = "已加入 ${selected.size} 个下载任务") }
+            controls.update { it.copy(selectedIds = emptySet(), selecting = false, message = "已加入 ${selected.size} 个下载任务") }
         }
     }
 }

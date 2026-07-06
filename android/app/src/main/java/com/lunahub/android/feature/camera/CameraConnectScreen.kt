@@ -89,6 +89,12 @@ private fun CameraConnectScreen(
                         )
                         Spacer(Modifier.height(8.dp))
                         Text(
+                            "如果连接后仍失败，请关闭系统的 WLAN+ / 自动切换网络，或在 Wi-Fi 设置中忘记该 Luna 热点后重新连接。",
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            style = MaterialTheme.typography.bodyMedium,
+                        )
+                        Spacer(Modifier.height(8.dp))
+                        Text(
                             "目标地址：http://${uiState.cameraHost}${uiState.cameraPath}",
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             style = MaterialTheme.typography.bodyMedium,
