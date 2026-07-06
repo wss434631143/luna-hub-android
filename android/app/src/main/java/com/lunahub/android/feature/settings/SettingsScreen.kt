@@ -78,7 +78,7 @@ private fun SettingsScreen(
                                 FilterChip(
                                     selected = uiState.settings.dataSourceMode == DataSourceMode.Mock,
                                     onClick = { onDataSourceModeChange(DataSourceMode.Mock) },
-                                    label = { Text("Mock") },
+                                    label = { Text("模拟") },
                                 )
                                 FilterChip(
                                     selected = uiState.settings.dataSourceMode == DataSourceMode.Real,
@@ -115,7 +115,11 @@ private fun SettingsScreen(
                 }
                 item {
                     LunaCard {
-                        SettingRow(Icons.Outlined.Info, "关于 Luna Hub", "面向 Insta360 相机的移动素材管理工具")
+                        SettingRow(
+                            Icons.Outlined.Info,
+                            "关于 Luna Hub",
+                            "面向 Insta360 相机用户的移动素材管理工具，支持浏览、预览、下载和轻量导出",
+                        )
                     }
                 }
             }
