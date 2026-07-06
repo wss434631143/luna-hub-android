@@ -1,5 +1,6 @@
 package com.lunahub.android.core.design
 
+import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -17,10 +18,13 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.ErrorOutline
 import androidx.compose.material.icons.outlined.Image
+import androidx.compose.material.icons.outlined.PlayCircle
 import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material.icons.outlined.Videocam
 import androidx.compose.material3.Button
@@ -37,9 +41,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.lunahub.android.domain.model.CameraMedia
@@ -51,16 +55,23 @@ fun LunaPage(
     subtitle: String? = null,
     content: @Composable ColumnScope.() -> Unit,
 ) {
-    Column(
+    Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
-            .padding(horizontal = LunaSpacing.PageHorizontal)
-            .padding(top = LunaSpacing.PageTop),
+            .background(MaterialTheme.colorScheme.background),
     ) {
-        LunaTopBar(title = title, subtitle = subtitle)
-        Spacer(Modifier.height(20.dp))
-        content()
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .widthIn(max = 920.dp)
+                .align(Alignment.TopCenter)
+                .padding(horizontal = LunaSpacing.PageHorizontal)
+                .padding(top = LunaSpacing.PageTop),
+        ) {
+            LunaTopBar(title = title, subtitle = subtitle)
+            Spacer(Modifier.height(20.dp))
+            content()
+        }
     }
 }
 
@@ -81,7 +92,9 @@ fun LunaCard(
     content: @Composable ColumnScope.() -> Unit,
 ) {
     Card(
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier
+            .fillMaxWidth()
+            .animateContentSize(),
         shape = RoundedCornerShape(LunaSpacing.CardRadius),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
@@ -146,14 +159,28 @@ fun LunaEmptyState(title: String, message: String, actionText: String? = null, o
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(vertical = 24.dp),
+                .padding(vertical = 30.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Icon(Icons.Outlined.Image, null, modifier = Modifier.size(36.dp), tint = MaterialTheme.colorScheme.primary)
-            Spacer(Modifier.height(12.dp))
+            Box(
+                modifier = Modifier
+                    .size(58.dp)
+                    .clip(RoundedCornerShape(20.dp))
+                    .background(MaterialTheme.colorScheme.surfaceVariant),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(Icons.Outlined.Image, null, modifier = Modifier.size(30.dp), tint = MaterialTheme.colorScheme.primary)
+            }
+            Spacer(Modifier.height(14.dp))
             Text(title, style = MaterialTheme.typography.titleMedium)
             Spacer(Modifier.height(6.dp))
-            Text(message, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(
+                message,
+                modifier = Modifier.fillMaxWidth(),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+            )
             if (actionText != null && onAction != null) {
                 Spacer(Modifier.height(16.dp))
                 LunaPrimaryButton(text = actionText, onClick = onAction, modifier = Modifier.fillMaxWidth())
@@ -177,11 +204,56 @@ fun LunaLoadingState(text: String = "正在加载") {
 fun LunaErrorState(message: String, onRetry: () -> Unit) {
     LunaCard {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(Icons.Outlined.ErrorOutline, null, tint = MaterialTheme.colorScheme.error)
-            Spacer(Modifier.width(10.dp))
-            Text(message, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
+            Box(
+                modifier = Modifier
+                    .size(42.dp)
+                    .clip(RoundedCornerShape(15.dp))
+                    .background(MaterialTheme.colorScheme.error.copy(alpha = 0.12f)),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(Icons.Outlined.ErrorOutline, null, tint = MaterialTheme.colorScheme.error)
+            }
+            Spacer(Modifier.width(12.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text("操作没有完成", style = MaterialTheme.typography.titleMedium)
+                Text(message, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
             LunaIconButton(Icons.Outlined.Refresh, "重试", onRetry)
         }
+    }
+}
+
+@Composable
+fun LunaIconTile(icon: ImageVector, tint: Color = MaterialTheme.colorScheme.primary) {
+    Box(
+        modifier = Modifier
+            .size(44.dp)
+            .clip(RoundedCornerShape(16.dp))
+            .background(tint.copy(alpha = 0.12f)),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(icon, null, tint = tint)
+    }
+}
+
+@Composable
+fun LunaStatusPill(text: String, active: Boolean, modifier: Modifier = Modifier) {
+    val color = if (active) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+    Row(
+        modifier = modifier
+            .clip(RoundedCornerShape(999.dp))
+            .background(color.copy(alpha = 0.12f))
+            .padding(horizontal = 10.dp, vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(
+            modifier = Modifier
+                .size(7.dp)
+                .clip(RoundedCornerShape(4.dp))
+                .background(color),
+        )
+        Spacer(Modifier.width(6.dp))
+        Text(text, color = color, style = MaterialTheme.typography.bodyMedium)
     }
 }
 
@@ -194,45 +266,61 @@ fun LunaMediaGridItem(
     onLongClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val brush = if (media.mediaType == MediaType.Photo) {
-        Brush.linearGradient(listOf(Color(0xFFDCE8F7), Color(0xFFBFCDE0)))
-    } else {
-        Brush.linearGradient(listOf(Color(0xFFE4E1F8), Color(0xFFC7C0E9)))
-    }
+    val tint = if (media.mediaType == MediaType.Photo) MaterialTheme.colorScheme.primary else Color(0xFF7A6FF0)
     Box(
         modifier = modifier
-            .clip(RoundedCornerShape(18.dp))
-            .background(brush)
+            .clip(RoundedCornerShape(20.dp))
+            .background(MaterialTheme.colorScheme.surfaceVariant)
             .combinedClickable(onClick = onClick, onLongClick = onLongClick)
             .aspectRatio(0.78f),
     ) {
         Icon(
-            imageVector = if (media.mediaType == MediaType.Video) Icons.Outlined.Videocam else Icons.Outlined.Image,
+            imageVector = if (media.mediaType == MediaType.Video) Icons.Outlined.PlayCircle else Icons.Outlined.Image,
             contentDescription = null,
             modifier = Modifier
                 .align(Alignment.Center)
-                .size(34.dp),
-            tint = Color.White.copy(alpha = 0.9f),
+                .size(38.dp),
+            tint = tint.copy(alpha = 0.72f),
         )
+        Row(
+            modifier = Modifier
+                .align(Alignment.TopStart)
+                .padding(8.dp)
+                .clip(RoundedCornerShape(999.dp))
+                .background(Color.Black.copy(alpha = 0.28f))
+                .padding(horizontal = 7.dp, vertical = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(
+                if (media.mediaType == MediaType.Video) Icons.Outlined.Videocam else Icons.Outlined.Image,
+                null,
+                modifier = Modifier.size(13.dp),
+                tint = Color.White,
+            )
+            Spacer(Modifier.width(4.dp))
+            Text(if (media.mediaType == MediaType.Video) "视频" else "照片", color = Color.White, style = MaterialTheme.typography.bodyMedium)
+        }
         Column(
             modifier = Modifier
                 .align(Alignment.BottomStart)
                 .fillMaxWidth()
-                .background(Color.Black.copy(alpha = 0.26f))
+                .background(Color.Black.copy(alpha = 0.30f))
                 .padding(8.dp),
         ) {
             Text(media.fileName, maxLines = 1, overflow = TextOverflow.Ellipsis, color = Color.White, style = MaterialTheme.typography.bodyMedium)
-            Text(if (media.mediaType == MediaType.Video) "视频" else "照片", color = Color.White.copy(alpha = 0.78f), style = MaterialTheme.typography.bodyMedium)
         }
         if (selected) {
             Box(
                 modifier = Modifier
                     .align(Alignment.TopEnd)
                     .padding(8.dp)
-                    .size(22.dp)
-                    .clip(RoundedCornerShape(11.dp))
+                    .size(24.dp)
+                    .clip(RoundedCornerShape(12.dp))
                     .background(MaterialTheme.colorScheme.primary),
-            )
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(Icons.Outlined.Check, null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.onPrimary)
+            }
         }
     }
 }

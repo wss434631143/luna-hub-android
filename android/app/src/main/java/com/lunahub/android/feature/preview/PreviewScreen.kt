@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -86,7 +87,7 @@ private fun PreviewContent(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .aspectRatio(0.78f)
+                    .aspectRatio(0.92f)
                     .clip(RoundedCornerShape(24.dp))
                     .background(MaterialTheme.colorScheme.surfaceVariant),
                 contentAlignment = Alignment.Center,
@@ -96,6 +97,14 @@ private fun PreviewContent(
                     contentDescription = null,
                     modifier = Modifier.size(68.dp),
                     tint = MaterialTheme.colorScheme.primary,
+                )
+                Text(
+                    text = if (media.mediaType == MediaType.Video) "视频预览将在 Media3 接入后播放" else "图片预览占位",
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .padding(18.dp),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    style = MaterialTheme.typography.bodyMedium,
                 )
             }
         }
@@ -108,7 +117,7 @@ private fun PreviewContent(
                 InfoRow("分辨率", "${media.width ?: "-"} x ${media.height ?: "-"}")
                 InfoRow("拍摄时间", media.createdAt.formatDateTime())
                 InfoRow("类型", if (media.mediaType == MediaType.Video) "视频 ${media.duration?.formatDuration() ?: ""}" else "照片")
-                InfoRow("下载状态", if (media.isDownloaded) "已保存" else "未下载")
+                InfoRow("保存状态", if (media.isDownloaded) "已保存到本地" else "未下载")
                 if (actionMessage != null) {
                     Spacer(Modifier.height(10.dp))
                     Text(actionMessage, color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.bodyMedium)

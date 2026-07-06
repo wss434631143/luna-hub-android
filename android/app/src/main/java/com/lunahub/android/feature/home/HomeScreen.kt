@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.CloudDownload
@@ -26,14 +27,17 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.lunahub.android.core.design.LunaCard
 import com.lunahub.android.core.design.LunaEmptyState
 import com.lunahub.android.core.design.LunaErrorState
+import com.lunahub.android.core.design.LunaIconTile
 import com.lunahub.android.core.design.LunaLoadingState
 import com.lunahub.android.core.design.LunaPage
 import com.lunahub.android.core.design.LunaPrimaryButton
 import com.lunahub.android.core.design.LunaSectionHeader
 import com.lunahub.android.core.design.LunaSecondaryButton
 import com.lunahub.android.core.design.LunaSpacing
+import com.lunahub.android.core.design.LunaStatusPill
 import com.lunahub.android.core.util.formatBytes
 import com.lunahub.android.domain.model.ConnectionStatus
+import com.lunahub.android.domain.model.MediaType
 
 @Composable
 fun HomeRoute(
@@ -62,7 +66,7 @@ private fun HomeScreen(
         when {
             uiState.isLoading -> LunaLoadingState()
             uiState.errorMessage != null -> LunaErrorState(uiState.errorMessage) {}
-            uiState.device == null -> LunaEmptyState("还没有设备", "请先连接 Luna 或 Insta360 相机", "连接相机", onConnectClick)
+            uiState.device == null -> LunaEmptyState("还没有连接相机", "连接相机 Wi-Fi 后，照片和视频会自动出现在素材库里", "连接相机", onConnectClick)
             else -> LazyColumn(
                 modifier = Modifier.weight(1f),
                 verticalArrangement = Arrangement.spacedBy(LunaSpacing.SectionGap),
@@ -70,28 +74,31 @@ private fun HomeScreen(
                 item {
                     LunaCard {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Outlined.Wifi, null, tint = MaterialTheme.colorScheme.primary)
+                            LunaIconTile(Icons.Outlined.Wifi)
+                            Spacer(Modifier.width(12.dp))
                             Column(modifier = Modifier.weight(1f).fillMaxWidth()) {
                                 Text(uiState.device.name, style = MaterialTheme.typography.titleMedium)
                                 Text(
-                                    text = if (uiState.connected) "已连接 ${uiState.device.ipAddress}" else "未连接，点击扫描相机",
+                                    text = if (uiState.connected) "已连接 ${uiState.device.ipAddress}" else "未连接相机，点击重新扫描",
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     style = MaterialTheme.typography.bodyMedium,
                                 )
                             }
-                            Text(
+                            LunaStatusPill(
                                 text = when (uiState.device.connectionStatus) {
                                     ConnectionStatus.Connected -> "在线"
                                     ConnectionStatus.Connecting -> "连接中"
                                     ConnectionStatus.Failed -> "失败"
                                     ConnectionStatus.Disconnected -> "离线"
                                 },
-                                color = MaterialTheme.colorScheme.primary,
-                                fontWeight = FontWeight.SemiBold,
+                                active = uiState.connected,
                             )
                         }
                         Spacer(Modifier.height(16.dp))
-                        LunaPrimaryButton("连接相机", onConnectClick, Modifier.fillMaxWidth())
+                        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            LunaPrimaryButton("连接相机", onConnectClick, Modifier.weight(1f))
+                            LunaSecondaryButton("打开素材", onLibraryClick, Modifier.weight(1f))
+                        }
                     }
                 }
                 item {
@@ -111,7 +118,7 @@ private fun HomeScreen(
                     LunaSectionHeader("最近素材", action = "查看全部", onAction = onLibraryClick)
                     Spacer(Modifier.height(10.dp))
                     if (uiState.recentMedia.isEmpty()) {
-                        LunaEmptyState("暂无素材", "连接相机后会显示最近拍摄的照片和视频")
+                        LunaEmptyState("还没有最近素材", "连接相机并刷新素材库后，这里会显示最新照片和视频")
                     } else {
                         LunaCard {
                             uiState.recentMedia.forEach { media ->
@@ -119,11 +126,8 @@ private fun HomeScreen(
                                     modifier = Modifier.fillMaxWidth(),
                                     verticalAlignment = Alignment.CenterVertically,
                                 ) {
-                                    Icon(
-                                        if (media.fileName.endsWith(".mp4")) Icons.Outlined.CloudDownload else Icons.Outlined.PhotoLibrary,
-                                        null,
-                                        tint = MaterialTheme.colorScheme.primary,
-                                    )
+                                    LunaIconTile(if (media.mediaType == MediaType.Video) Icons.Outlined.CloudDownload else Icons.Outlined.PhotoLibrary)
+                                    Spacer(Modifier.width(12.dp))
                                     Column(modifier = Modifier.weight(1f)) {
                                         Text(media.fileName, maxLines = 1, style = MaterialTheme.typography.bodyLarge)
                                         Text(media.fileSize.formatBytes(), color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodyMedium)

@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.CleaningServices
@@ -30,6 +31,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.lunahub.android.core.design.LunaCard
 import com.lunahub.android.core.design.LunaErrorState
+import com.lunahub.android.core.design.LunaIconTile
 import com.lunahub.android.core.design.LunaLoadingState
 import com.lunahub.android.core.design.LunaPage
 import com.lunahub.android.core.design.LunaSectionHeader
@@ -49,7 +51,7 @@ private fun SettingsScreen(
     onClearCache: () -> Unit,
     onDataSourceModeChange: (DataSourceMode) -> Unit,
 ) {
-    LunaPage(title = "设置", subtitle = "主题、下载、水印与缓存") {
+    LunaPage(title = "设置", subtitle = "连接、下载与应用偏好") {
         when {
             uiState.isLoading && uiState.settings == null -> LunaLoadingState("正在读取设置")
             uiState.errorMessage != null -> LunaErrorState(uiState.errorMessage) {}
@@ -58,20 +60,20 @@ private fun SettingsScreen(
                 verticalArrangement = Arrangement.spacedBy(LunaSpacing.SectionGap),
             ) {
                 item {
-                    LunaSectionHeader("通用")
+                    LunaSectionHeader("外观")
                     Spacer(Modifier.height(10.dp))
                     LunaCard {
-                        SettingRow(Icons.Outlined.DarkMode, "主题设置", "跟随系统，支持深色模式") {
+                        SettingRow(Icons.Outlined.DarkMode, "主题", "跟随系统，深色模式下自动降低背景亮度") {
                             Text(uiState.settings.themeMode.name, color = MaterialTheme.colorScheme.primary)
                         }
-                        SettingRow(Icons.Outlined.Download, "下载目录", uiState.settings.defaultDownloadFolder)
+                        SettingRow(Icons.Outlined.Download, "下载位置", "App 专属目录 / ${uiState.settings.defaultDownloadFolder}")
                     }
                 }
                 item {
-                    LunaSectionHeader("相机接口")
+                    LunaSectionHeader("相机")
                     Spacer(Modifier.height(10.dp))
                     LunaCard {
-                        SettingRow(Icons.Outlined.SettingsInputAntenna, "数据来源", "默认 mock；真实模式访问相机 HTTP 目录") {
+                        SettingRow(Icons.Outlined.SettingsInputAntenna, "数据来源", "模拟模式用于体验；真实模式读取相机目录") {
                             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                 FilterChip(
                                     selected = uiState.settings.dataSourceMode == DataSourceMode.Mock,
@@ -87,7 +89,7 @@ private fun SettingsScreen(
                         }
                         SettingRow(
                             Icons.Outlined.Info,
-                            "相机地址",
+                            "默认地址",
                             "http://${uiState.settings.cameraHost}${uiState.settings.cameraPath}",
                         )
                     }
@@ -96,7 +98,7 @@ private fun SettingsScreen(
                     LunaSectionHeader("导出")
                     Spacer(Modifier.height(10.dp))
                     LunaCard {
-                        SettingRow(Icons.Outlined.WaterDrop, "水印设置", "第一阶段为入口占位") {
+                        SettingRow(Icons.Outlined.WaterDrop, "水印", "后续支持位置、大小和透明度") {
                             Switch(checked = uiState.settings.watermarkEnabled, onCheckedChange = null)
                         }
                     }
@@ -105,7 +107,7 @@ private fun SettingsScreen(
                     LunaSectionHeader("存储")
                     Spacer(Modifier.height(10.dp))
                     LunaCard {
-                        SettingRow(Icons.Outlined.CleaningServices, "缓存清理", uiState.settings.cacheSize.formatBytes(), onClick = onClearCache)
+                        SettingRow(Icons.Outlined.CleaningServices, "清理缓存", "当前缓存 ${uiState.settings.cacheSize.formatBytes()}", onClick = onClearCache)
                         if (uiState.message != null) {
                             Text(uiState.message, color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.bodyMedium)
                         }
@@ -113,7 +115,7 @@ private fun SettingsScreen(
                 }
                 item {
                     LunaCard {
-                        SettingRow(Icons.Outlined.Info, "关于 Luna Hub", "原生 Android MVP · Mock 版本")
+                        SettingRow(Icons.Outlined.Info, "关于 Luna Hub", "面向 Insta360 相机的移动素材管理工具")
                     }
                 }
             }
@@ -135,7 +137,8 @@ private fun SettingRow(
             .clickable(enabled = onClick != null) { onClick?.invoke() },
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Icon(icon, null, tint = MaterialTheme.colorScheme.primary)
+        LunaIconTile(icon)
+        Spacer(Modifier.width(12.dp))
         Column(modifier = Modifier.weight(1f)) {
             Text(title, style = MaterialTheme.typography.bodyLarge)
             Text(subtitle, color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodyMedium)

@@ -6,12 +6,14 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.CloudDownload
 import androidx.compose.material.icons.outlined.ErrorOutline
+import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -27,10 +29,12 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.lunahub.android.core.design.LunaCard
 import com.lunahub.android.core.design.LunaEmptyState
 import com.lunahub.android.core.design.LunaErrorState
+import com.lunahub.android.core.design.LunaIconTile
 import com.lunahub.android.core.design.LunaLoadingState
 import com.lunahub.android.core.design.LunaPage
 import com.lunahub.android.core.design.LunaSecondaryButton
 import com.lunahub.android.core.design.LunaSpacing
+import com.lunahub.android.core.design.LunaStatusPill
 import com.lunahub.android.core.util.formatBytes
 import com.lunahub.android.domain.model.DownloadStatus
 import com.lunahub.android.domain.model.DownloadTask
@@ -51,7 +55,7 @@ private fun DownloadScreen(
         when {
             uiState.isLoading -> LunaLoadingState("正在读取下载队列")
             uiState.errorMessage != null -> LunaErrorState(uiState.errorMessage) {}
-            uiState.tasks.isEmpty() -> LunaEmptyState("没有下载任务", "在素材预览页点击下载后，任务会显示在这里")
+            uiState.tasks.isEmpty() -> LunaEmptyState("还没有下载任务", "在预览页或素材库多选后点击下载，进度会显示在这里")
             else -> LazyColumn(
                 modifier = Modifier.weight(1f),
                 verticalArrangement = Arrangement.spacedBy(LunaSpacing.SectionGap),
@@ -73,11 +77,14 @@ private fun DownloadTaskCard(
     val icon: ImageVector = when (task.status) {
         DownloadStatus.Success -> Icons.Outlined.CheckCircle
         DownloadStatus.Failed -> Icons.Outlined.ErrorOutline
+        DownloadStatus.Queued -> Icons.Outlined.Schedule
+        DownloadStatus.Canceled -> Icons.Outlined.ErrorOutline
         else -> Icons.Outlined.CloudDownload
     }
     LunaCard {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(icon, null, tint = if (task.status == DownloadStatus.Failed) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary)
+            LunaIconTile(icon, tint = if (task.status == DownloadStatus.Failed || task.status == DownloadStatus.Canceled) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary)
+            Spacer(Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(task.fileName, style = MaterialTheme.typography.bodyLarge)
                 Text(
@@ -92,7 +99,16 @@ private fun DownloadTaskCard(
                     style = MaterialTheme.typography.bodyMedium,
                 )
             }
-            Text("${(task.progress * 100).toInt()}%", color = MaterialTheme.colorScheme.primary)
+            LunaStatusPill(
+                text = when (task.status) {
+                    DownloadStatus.Queued -> "等待"
+                    DownloadStatus.Downloading -> "${(task.progress * 100).toInt()}%"
+                    DownloadStatus.Success -> "完成"
+                    DownloadStatus.Failed -> "失败"
+                    DownloadStatus.Canceled -> "取消"
+                },
+                active = task.status == DownloadStatus.Downloading || task.status == DownloadStatus.Success,
+            )
         }
         Spacer(Modifier.height(12.dp))
         LinearProgressIndicator(progress = { task.progress }, modifier = Modifier.fillMaxWidth())

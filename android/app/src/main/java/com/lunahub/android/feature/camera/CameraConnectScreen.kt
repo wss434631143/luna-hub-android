@@ -25,11 +25,13 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.lunahub.android.core.design.LunaCard
 import com.lunahub.android.core.design.LunaErrorState
+import com.lunahub.android.core.design.LunaIconTile
 import com.lunahub.android.core.design.LunaLoadingState
 import com.lunahub.android.core.design.LunaPage
 import com.lunahub.android.core.design.LunaPrimaryButton
 import com.lunahub.android.core.design.LunaSectionHeader
 import com.lunahub.android.core.design.LunaSpacing
+import com.lunahub.android.core.design.LunaStatusPill
 import com.lunahub.android.core.util.formatBytes
 import com.lunahub.android.domain.model.ConnectionStatus
 import com.lunahub.android.domain.model.DataSourceMode
@@ -49,7 +51,7 @@ private fun CameraConnectScreen(
     onScan: () -> Unit,
     onOpenLibrary: () -> Unit,
 ) {
-    LunaPage(title = "连接相机", subtitle = "通过 Wi-Fi 连接 Luna Ultra，Type-C 将在后续阶段接入") {
+    LunaPage(title = "连接相机", subtitle = "连接相机 Wi-Fi 后读取机内照片和视频") {
         LazyColumn(
             modifier = Modifier.weight(1f),
             verticalArrangement = Arrangement.spacedBy(LunaSpacing.SectionGap),
@@ -57,14 +59,15 @@ private fun CameraConnectScreen(
             item {
                 LunaCard {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Outlined.Wifi, null, tint = MaterialTheme.colorScheme.primary)
+                        LunaIconTile(Icons.Outlined.Wifi)
+                        Spacer(Modifier.width(12.dp))
                         Column(modifier = Modifier.weight(1f)) {
                             Text("连接引导", style = MaterialTheme.typography.titleMedium)
                             Text(
                                 if (uiState.mode == DataSourceMode.Real) {
-                                    "打开相机热点，让手机连接到 Luna / Insta360 Wi-Fi。"
+                                    "先在系统 Wi-Fi 中连接 Luna / Insta360 热点，再返回扫描。"
                                 } else {
-                                    "当前为 mock 模式，可先体验页面流程。"
+                                    "当前为模拟模式，可先体验完整页面流程。"
                                 },
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
@@ -101,12 +104,16 @@ private fun CameraConnectScreen(
                     Spacer(Modifier.height(10.dp))
                     LunaCard {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Outlined.CheckCircle, null, tint = MaterialTheme.colorScheme.primary)
+                            LunaIconTile(Icons.Outlined.CheckCircle)
+                            Spacer(Modifier.width(12.dp))
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(device.name, style = MaterialTheme.typography.titleMedium)
                                 Text(device.ipAddress, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
-                            Text(if (device.connectionStatus == ConnectionStatus.Connected) "已连接" else "未连接", color = MaterialTheme.colorScheme.primary)
+                            LunaStatusPill(
+                                text = if (device.connectionStatus == ConnectionStatus.Connected) "已连接" else "未连接",
+                                active = device.connectionStatus == ConnectionStatus.Connected,
+                            )
                         }
                         Spacer(Modifier.height(14.dp))
                         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {

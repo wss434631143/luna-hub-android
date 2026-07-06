@@ -64,7 +64,7 @@ private fun LibraryScreen(
         when {
             uiState.isLoading -> LunaLoadingState()
             uiState.errorMessage != null -> LunaErrorState(uiState.errorMessage) {}
-            uiState.media.isEmpty() -> LunaEmptyState("暂无素材", "连接相机后会在这里显示照片和视频")
+            uiState.media.isEmpty() -> LunaEmptyState("素材库是空的", "连接相机并扫描后，照片和视频会按日期整理在这里")
             else -> {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     MediaFilter.entries.forEach { filter ->
@@ -87,7 +87,7 @@ private fun LibraryScreen(
                     Spacer(Modifier.height(10.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                         LunaPrimaryButton("下载所选", onDownloadSelected, Modifier.weight(1f))
-                        LunaPrimaryButton("清除选择", onClearSelection, Modifier.weight(1f))
+                        LunaPrimaryButton("取消选择", onClearSelection, Modifier.weight(1f))
                     }
                 }
                 if (uiState.message != null) {
@@ -97,11 +97,11 @@ private fun LibraryScreen(
                 Spacer(Modifier.height(12.dp))
                 val groups = uiState.filteredMedia.groupBy { it.createdAt.formatDate() }
                 LazyVerticalGrid(
-                    columns = GridCells.Fixed(3),
+                    columns = GridCells.Adaptive(minSize = 104.dp),
                     modifier = Modifier.weight(1f),
                     contentPadding = PaddingValues(bottom = 92.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
                     groups.forEach { (day, itemsForDay) ->
                         item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }) {
