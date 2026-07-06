@@ -5,7 +5,8 @@ import androidx.lifecycle.viewModelScope
 import com.lunahub.android.domain.model.CameraDevice
 import com.lunahub.android.domain.model.CameraMedia
 import com.lunahub.android.domain.model.ConnectionStatus
-import com.lunahub.android.domain.repository.LunaRepository
+import com.lunahub.android.domain.usecase.ObserveCameraDeviceUseCase
+import com.lunahub.android.domain.usecase.ObserveCameraMediaUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -23,8 +24,11 @@ data class HomeUiState(
 }
 
 @HiltViewModel
-class HomeViewModel @Inject constructor(repository: LunaRepository) : ViewModel() {
-    val uiState: StateFlow<HomeUiState> = combine(repository.cameraDevice, repository.media) { device, media ->
+class HomeViewModel @Inject constructor(
+    observeCameraDevice: ObserveCameraDeviceUseCase,
+    observeCameraMedia: ObserveCameraMediaUseCase,
+) : ViewModel() {
+    val uiState: StateFlow<HomeUiState> = combine(observeCameraDevice(), observeCameraMedia()) { device, media ->
         HomeUiState(device = device, recentMedia = media.sortedByDescending { it.createdAt }.take(4))
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), HomeUiState(isLoading = true))
 }

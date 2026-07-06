@@ -13,7 +13,9 @@ import androidx.compose.material.icons.outlined.CleaningServices
 import androidx.compose.material.icons.outlined.DarkMode
 import androidx.compose.material.icons.outlined.Download
 import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material.icons.outlined.SettingsInputAntenna
 import androidx.compose.material.icons.outlined.WaterDrop
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
@@ -33,17 +35,19 @@ import com.lunahub.android.core.design.LunaPage
 import com.lunahub.android.core.design.LunaSectionHeader
 import com.lunahub.android.core.design.LunaSpacing
 import com.lunahub.android.core.util.formatBytes
+import com.lunahub.android.domain.model.DataSourceMode
 
 @Composable
 fun SettingsRoute(viewModel: SettingsViewModel = hiltViewModel()) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    SettingsScreen(uiState, viewModel::clearCache)
+    SettingsScreen(uiState, viewModel::clearCache, viewModel::setDataSourceMode)
 }
 
 @Composable
 private fun SettingsScreen(
     uiState: SettingsUiState,
     onClearCache: () -> Unit,
+    onDataSourceModeChange: (DataSourceMode) -> Unit,
 ) {
     LunaPage(title = "设置", subtitle = "主题、下载、水印与缓存") {
         when {
@@ -61,6 +65,31 @@ private fun SettingsScreen(
                             Text(uiState.settings.themeMode.name, color = MaterialTheme.colorScheme.primary)
                         }
                         SettingRow(Icons.Outlined.Download, "下载目录", uiState.settings.defaultDownloadFolder)
+                    }
+                }
+                item {
+                    LunaSectionHeader("相机接口")
+                    Spacer(Modifier.height(10.dp))
+                    LunaCard {
+                        SettingRow(Icons.Outlined.SettingsInputAntenna, "数据来源", "默认 mock；真实模式访问相机 HTTP 目录") {
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                FilterChip(
+                                    selected = uiState.settings.dataSourceMode == DataSourceMode.Mock,
+                                    onClick = { onDataSourceModeChange(DataSourceMode.Mock) },
+                                    label = { Text("Mock") },
+                                )
+                                FilterChip(
+                                    selected = uiState.settings.dataSourceMode == DataSourceMode.Real,
+                                    onClick = { onDataSourceModeChange(DataSourceMode.Real) },
+                                    label = { Text("真实") },
+                                )
+                            }
+                        }
+                        SettingRow(
+                            Icons.Outlined.Info,
+                            "相机地址",
+                            "http://${uiState.settings.cameraHost}${uiState.settings.cameraPath}",
+                        )
                     }
                 }
                 item {

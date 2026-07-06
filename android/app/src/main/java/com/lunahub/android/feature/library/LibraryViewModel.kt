@@ -5,7 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.lunahub.android.domain.model.CameraMedia
 import com.lunahub.android.domain.model.MediaFilter
 import com.lunahub.android.domain.model.MediaType
-import com.lunahub.android.domain.repository.LunaRepository
+import com.lunahub.android.domain.usecase.ObserveCameraMediaUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -31,10 +31,12 @@ data class LibraryUiState(
 }
 
 @HiltViewModel
-class LibraryViewModel @Inject constructor(repository: LunaRepository) : ViewModel() {
+class LibraryViewModel @Inject constructor(
+    observeCameraMedia: ObserveCameraMediaUseCase,
+) : ViewModel() {
     private val controls = MutableStateFlow(LibraryUiState())
 
-    val uiState: StateFlow<LibraryUiState> = combine(repository.media, controls) { media, state ->
+    val uiState: StateFlow<LibraryUiState> = combine(observeCameraMedia(), controls) { media, state ->
         state.copy(media = media)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), LibraryUiState(isLoading = true))
 

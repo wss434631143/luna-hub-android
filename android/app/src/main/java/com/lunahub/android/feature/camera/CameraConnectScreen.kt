@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Battery5Bar
@@ -31,6 +32,7 @@ import com.lunahub.android.core.design.LunaSectionHeader
 import com.lunahub.android.core.design.LunaSpacing
 import com.lunahub.android.core.util.formatBytes
 import com.lunahub.android.domain.model.ConnectionStatus
+import com.lunahub.android.domain.model.DataSourceMode
 
 @Composable
 fun CameraConnectRoute(
@@ -58,11 +60,26 @@ private fun CameraConnectScreen(
                         Icon(Icons.Outlined.Wifi, null, tint = MaterialTheme.colorScheme.primary)
                         Column(modifier = Modifier.weight(1f)) {
                             Text("连接引导", style = MaterialTheme.typography.titleMedium)
-                            Text("打开相机热点并让手机连接到 Luna / Insta360 Wi-Fi。", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(
+                                if (uiState.mode == DataSourceMode.Real) {
+                                    "打开相机热点，让手机连接到 Luna / Insta360 Wi-Fi。"
+                                } else {
+                                    "当前为 mock 模式，可先体验页面流程。"
+                                },
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
                         }
                     }
                     Spacer(Modifier.height(14.dp))
                     Text(uiState.wifiHint, color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodyMedium)
+                    if (uiState.mode == DataSourceMode.Real) {
+                        Spacer(Modifier.height(8.dp))
+                        Text(
+                            "目标地址：http://${uiState.cameraHost}${uiState.cameraPath}",
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            style = MaterialTheme.typography.bodyMedium,
+                        )
+                    }
                     Spacer(Modifier.height(16.dp))
                     LunaPrimaryButton(
                         text = if (uiState.isLoading) "扫描中..." else "扫描相机",
@@ -109,7 +126,7 @@ private fun CameraConnectScreen(
 private fun InfoPill(icon: androidx.compose.ui.graphics.vector.ImageVector, text: String) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         Icon(icon, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
-        Spacer(Modifier.height(4.dp))
+        Spacer(Modifier.width(4.dp))
         Text(text, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }

@@ -3,7 +3,7 @@ package com.lunahub.android.feature.download
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.lunahub.android.domain.model.DownloadTask
-import com.lunahub.android.domain.repository.LunaRepository
+import com.lunahub.android.domain.usecase.ObserveDownloadsUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -18,8 +18,10 @@ data class DownloadUiState(
 )
 
 @HiltViewModel
-class DownloadViewModel @Inject constructor(repository: LunaRepository) : ViewModel() {
-    val uiState: StateFlow<DownloadUiState> = repository.downloads
+class DownloadViewModel @Inject constructor(
+    observeDownloads: ObserveDownloadsUseCase,
+) : ViewModel() {
+    val uiState: StateFlow<DownloadUiState> = observeDownloads()
         .map { DownloadUiState(tasks = it) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), DownloadUiState(isLoading = true))
 }

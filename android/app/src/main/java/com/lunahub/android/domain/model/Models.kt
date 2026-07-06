@@ -25,6 +25,11 @@ enum class ThemeMode {
     Dark,
 }
 
+enum class DataSourceMode {
+    Mock,
+    Real,
+}
+
 enum class WatermarkPosition {
     TopLeft,
     TopRight,
@@ -86,6 +91,9 @@ data class AppSettings(
     val defaultDownloadFolder: String,
     val watermarkEnabled: Boolean,
     val cacheSize: Long,
+    val dataSourceMode: DataSourceMode = DataSourceMode.Mock,
+    val cameraHost: String = "192.168.42.1",
+    val cameraPath: String = "/storage_internal/DCIM/",
 )
 
 enum class MediaFilter {

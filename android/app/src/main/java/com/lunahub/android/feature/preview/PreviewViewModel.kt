@@ -4,7 +4,8 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.lunahub.android.domain.model.CameraMedia
-import com.lunahub.android.domain.repository.LunaRepository
+import com.lunahub.android.domain.usecase.GetMediaUseCase
+import com.lunahub.android.domain.usecase.StartDownloadUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -23,7 +24,8 @@ data class PreviewUiState(
 @HiltViewModel
 class PreviewViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
-    private val repository: LunaRepository,
+    private val getMedia: GetMediaUseCase,
+    private val startDownload: StartDownloadUseCase,
 ) : ViewModel() {
     private val mediaId: String = checkNotNull(savedStateHandle["mediaId"])
     private val mutableUiState = MutableStateFlow(PreviewUiState())
@@ -31,7 +33,7 @@ class PreviewViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
-            val media = repository.getMedia(mediaId)
+            val media = getMedia(mediaId)
             mutableUiState.value = if (media == null) {
                 PreviewUiState(isLoading = false, errorMessage = "素材不存在")
             } else {
@@ -44,7 +46,7 @@ class PreviewViewModel @Inject constructor(
         val media = mutableUiState.value.media ?: return
         viewModelScope.launch {
             mutableUiState.update { it.copy(actionMessage = "已加入下载队列") }
-            repository.startMockDownload(media.id)
+            startDownload(media.id)
         }
     }
 

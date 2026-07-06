@@ -3,6 +3,7 @@ package com.lunahub.android.domain.repository
 import com.lunahub.android.domain.model.AppSettings
 import com.lunahub.android.domain.model.CameraDevice
 import com.lunahub.android.domain.model.CameraMedia
+import com.lunahub.android.domain.model.DataSourceMode
 import com.lunahub.android.domain.model.DownloadTask
 import kotlinx.coroutines.flow.Flow
 
@@ -17,4 +18,5 @@ interface LunaRepository {
     suspend fun getMedia(mediaId: String): CameraMedia?
     suspend fun startMockDownload(mediaId: String)
     suspend fun clearCache()
+    suspend fun setDataSourceMode(mode: DataSourceMode)
 }
