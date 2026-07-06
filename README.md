@@ -6,7 +6,7 @@ Luna Hub Android 是面向 Insta360 Luna Ultra / Insta360 相机用户的原生 
 
 ## 当前版本
 
-- 版本：`0.1.2`
+- 版本：`0.1.3`
 - 包名：`com.lunahub.android`
 - 最低系统：Android 7.0 / API 24
 - 目标系统：Android 15 / API 36

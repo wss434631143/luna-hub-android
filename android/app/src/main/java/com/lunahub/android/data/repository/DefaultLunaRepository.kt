@@ -1,5 +1,6 @@
 package com.lunahub.android.data.repository
 
+import com.lunahub.android.core.network.CameraNetworkHelper
 import com.lunahub.android.data.mapper.CameraMediaMapper
 import com.lunahub.android.data.remote.CameraRemoteDataSource
 import com.lunahub.android.domain.model.AppSettings
@@ -22,6 +23,7 @@ import javax.inject.Singleton
 class DefaultLunaRepository @Inject constructor(
     private val remoteDataSource: CameraRemoteDataSource,
     private val mediaMapper: CameraMediaMapper,
+    private val cameraNetworkHelper: CameraNetworkHelper,
 ) : LunaRepository {
     private val deviceState = MutableStateFlow(mockDevice(ConnectionStatus.Disconnected))
     private val mediaState = MutableStateFlow(emptyList<CameraMedia>())
@@ -88,32 +90,46 @@ class DefaultLunaRepository @Inject constructor(
 
     private suspend fun connectRealCamera(): CameraDevice {
         val settings = settingsState.value
+        cameraNetworkHelper.bindProcessToWifi()
+        val hosts = cameraNetworkHelper.cameraHostCandidates(settings.cameraHost)
+        val firstHost = hosts.firstOrNull() ?: settings.cameraHost
         deviceState.update {
             it.copy(
-                ipAddress = settings.cameraHost,
+                ipAddress = firstHost,
                 connectionStatus = ConnectionStatus.Connecting,
             )
         }
         return try {
             val paths = listOf(settings.cameraPath, "/DCIM/").distinct()
-            val connectedPath = paths.firstOrNull { path ->
-                remoteDataSource.checkStatus(settings.cameraHost, path).httpOk
+            var connectedHost: String? = null
+            var connectedPath: String? = null
+            hosts.firstOrNull { host ->
+                paths.firstOrNull { path ->
+                    val ok = remoteDataSource.checkStatus(host, path).httpOk
+                    if (ok) {
+                        connectedHost = host
+                        connectedPath = path
+                    }
+                    ok
+                } != null
             } ?: run {
                 val failed = deviceState.value.copy(connectionStatus = ConnectionStatus.Failed)
                 deviceState.value = failed
-                throw IllegalStateException("未检测到相机媒体服务。请确认手机已连接 Luna 开头的相机 Wi-Fi，并保持相机屏幕唤醒。")
+                throw IllegalStateException("未检测到相机媒体服务。已尝试 ${hosts.joinToString("、")}。请确认手机已连接 Luna 开头的相机 Wi-Fi，并关闭 WLAN+ / 自动切换网络。")
             }
-            val status = remoteDataSource.checkStatus(settings.cameraHost, connectedPath)
+            val host = checkNotNull(connectedHost)
+            val path = checkNotNull(connectedPath)
+            val status = remoteDataSource.checkStatus(host, path)
             if (!status.httpOk) {
                 val failed = deviceState.value.copy(connectionStatus = ConnectionStatus.Failed)
                 deviceState.value = failed
                 throw IllegalStateException(status.message)
             }
-            val remoteMedia = remoteDataSource.listMedia(settings.cameraHost, connectedPath)
+            val remoteMedia = remoteDataSource.listMedia(host, path)
             mediaState.value = remoteMedia.map(mediaMapper::fromRemote)
             val connected = deviceState.value.copy(
                 name = "Luna Ultra",
-                ipAddress = settings.cameraHost,
+                ipAddress = host,
                 connectionStatus = ConnectionStatus.Connected,
                 firmwareVersion = null,
                 batteryLevel = null,
