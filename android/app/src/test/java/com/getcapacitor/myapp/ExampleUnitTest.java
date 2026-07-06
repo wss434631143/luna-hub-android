@@ -1,4 +1,4 @@
-package com.getcapacitor.myapp;
+package com.lunahub.android;
 
 import static org.junit.Assert.*;
 

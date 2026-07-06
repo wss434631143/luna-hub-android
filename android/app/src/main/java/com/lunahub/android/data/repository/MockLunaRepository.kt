@@ -1,0 +1,127 @@
+package com.lunahub.android.data.repository
+
+import com.lunahub.android.domain.model.AppSettings
+import com.lunahub.android.domain.model.CameraDevice
+import com.lunahub.android.domain.model.CameraMedia
+import com.lunahub.android.domain.model.ConnectionStatus
+import com.lunahub.android.domain.model.DownloadStatus
+import com.lunahub.android.domain.model.DownloadTask
+import com.lunahub.android.domain.model.MediaType
+import com.lunahub.android.domain.model.ThemeMode
+import com.lunahub.android.domain.repository.LunaRepository
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
+import javax.inject.Inject
+import javax.inject.Singleton
+
+@Singleton
+class MockLunaRepository @Inject constructor() : LunaRepository {
+    private val deviceState = MutableStateFlow(
+        CameraDevice(
+            id = "luna-ultra",
+            name = "Luna Ultra",
+            ipAddress = "192.168.42.1",
+            connectionStatus = ConnectionStatus.Disconnected,
+            firmwareVersion = "1.3.8",
+            batteryLevel = 82,
+            storageTotal = 256L * 1024 * 1024 * 1024,
+            storageUsed = 96L * 1024 * 1024 * 1024,
+        ),
+    )
+    private val mediaState = MutableStateFlow(mockMedia())
+    private val downloadState = MutableStateFlow(mockDownloads())
+    private val settingsState = MutableStateFlow(
+        AppSettings(
+            themeMode = ThemeMode.System,
+            downloadWifiOnly = true,
+            defaultDownloadFolder = "Pictures/Luna Hub",
+            watermarkEnabled = true,
+            cacheSize = 186L * 1024 * 1024,
+        ),
+    )
+
+    override val cameraDevice: Flow<CameraDevice> = deviceState.asStateFlow()
+    override val media: Flow<List<CameraMedia>> = mediaState.asStateFlow()
+    override val downloads: Flow<List<DownloadTask>> = downloadState.asStateFlow()
+    override val settings: Flow<AppSettings> = settingsState.asStateFlow()
+
+    override suspend fun scanCamera(): CameraDevice {
+        deviceState.update { it.copy(connectionStatus = ConnectionStatus.Connecting) }
+        delay(700)
+        val connected = deviceState.value.copy(connectionStatus = ConnectionStatus.Connected)
+        deviceState.value = connected
+        return connected
+    }
+
+    override suspend fun connectCamera(): CameraDevice = scanCamera()
+
+    override suspend fun getMedia(mediaId: String): CameraMedia? {
+        return mediaState.value.firstOrNull { it.id == mediaId }
+    }
+
+    override suspend fun startMockDownload(mediaId: String) {
+        val media = getMedia(mediaId) ?: return
+        val taskId = "download-$mediaId"
+        downloadState.update { current ->
+            val withoutOld = current.filterNot { it.mediaId == mediaId }
+            listOf(
+                DownloadTask(
+                    id = taskId,
+                    mediaId = media.id,
+                    fileName = media.fileName,
+                    progress = 0.12f,
+                    status = DownloadStatus.Downloading,
+                    speed = 8L * 1024 * 1024,
+                    errorMessage = null,
+                    localPath = null,
+                ),
+            ) + withoutOld
+        }
+        delay(500)
+        downloadState.update { current ->
+            current.map {
+                if (it.id == taskId) {
+                    it.copy(
+                        progress = 1f,
+                        status = DownloadStatus.Success,
+                        speed = 0,
+                        localPath = "/storage/emulated/0/Pictures/Luna Hub/${media.fileName}",
+                    )
+                } else {
+                    it
+                }
+            }
+        }
+        mediaState.update { current ->
+            current.map {
+                if (it.id == mediaId) it.copy(isDownloaded = true, localPath = "/storage/emulated/0/Pictures/Luna Hub/${it.fileName}") else it
+            }
+        }
+    }
+
+    override suspend fun clearCache() {
+        delay(250)
+        settingsState.update { it.copy(cacheSize = 0) }
+    }
+}
+
+private fun mockMedia(): List<CameraMedia> {
+    val now = System.currentTimeMillis()
+    return listOf(
+        CameraMedia("m1", "IMG_20260707_081220.jpg", "/DCIM/Camera01/IMG_20260707_081220.jpg", null, "", MediaType.Photo, 6_400_000, null, 4000, 3000, now - 1_800_000, false, null),
+        CameraMedia("m2", "VID_20260707_083100.mp4", "/DCIM/Camera01/VID_20260707_083100.mp4", null, "", MediaType.Video, 216_000_000, 42_000, 3840, 2160, now - 1_500_000, false, null),
+        CameraMedia("m3", "IMG_20260707_090504.jpg", "/DCIM/Camera01/IMG_20260707_090504.jpg", null, "", MediaType.Photo, 7_200_000, null, 4000, 3000, now - 800_000, true, "/storage/emulated/0/Pictures/Luna Hub/IMG_20260707_090504.jpg"),
+        CameraMedia("m4", "IMG_20260706_174232.jpg", "/DCIM/Camera01/IMG_20260706_174232.jpg", null, "", MediaType.Photo, 5_900_000, null, 4000, 3000, now - 86_400_000, false, null),
+        CameraMedia("m5", "VID_20260706_181045.mp4", "/DCIM/Camera01/VID_20260706_181045.mp4", null, "", MediaType.Video, 486_000_000, 85_000, 3840, 2160, now - 84_000_000, false, null),
+        CameraMedia("m6", "IMG_20260705_120016.jpg", "/DCIM/Camera01/IMG_20260705_120016.jpg", null, "", MediaType.Photo, 8_100_000, null, 4000, 3000, now - 172_800_000, false, null),
+    )
+}
+
+private fun mockDownloads(): List<DownloadTask> = listOf(
+    DownloadTask("d1", "m3", "IMG_20260707_090504.jpg", 1f, DownloadStatus.Success, 0, null, "/storage/emulated/0/Pictures/Luna Hub/IMG_20260707_090504.jpg"),
+    DownloadTask("d2", "m5", "VID_20260706_181045.mp4", 0.46f, DownloadStatus.Downloading, 11L * 1024 * 1024, null, null),
+    DownloadTask("d3", "m2", "VID_20260707_083100.mp4", 0f, DownloadStatus.Failed, 0, "相机连接已断开", null),
+)
