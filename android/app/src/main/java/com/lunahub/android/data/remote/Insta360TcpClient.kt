@@ -16,6 +16,7 @@ import javax.inject.Singleton
 data class TcpProbeResult(
     val connected: Boolean,
     val authorized: Boolean?,
+    val authorizationRequested: Boolean,
     val files: List<LunaRemoteMedia>,
     val summary: String,
 )
@@ -31,14 +32,36 @@ class Insta360TcpClient @Inject constructor() {
             val session = TcpSession(socket)
             session.write(session.streamHello())
             session.readAvailable()
+            session.bootstrapLikeDesktop()
 
             val auth = runCatching {
                 val response = session.sendMessage(CODE_CHECK_AUTHORIZATION)
                 inferAuthorization(response.body)
             }.getOrNull()
+            var finalAuth = auth
+            var requestedAuthorization = false
+
+            if (finalAuth != true) {
+                requestedAuthorization = true
+                runCatching {
+                    session.sendNotify(CODE_PHONE_INFO)
+                    val response = session.sendMessage(CODE_REQUEST_AUTHORIZATION, timeoutMs = AUTH_TIMEOUT_MS)
+                    finalAuth = inferAuthorization(response.body) ?: finalAuth
+                }
+            }
 
             val paths = linkedSetOf<String>()
             for (selector in listOf(2, 3)) {
+                for (command in desktopFileListCommands(selector)) {
+                    val response = runCatching {
+                        session.sendExactFile(command.seq, command.requestId, CODE_GET_FILE_LIST, command.body, timeoutMs = 8000)
+                    }.getOrNull() ?: continue
+                    val pagePaths = extractMediaPaths(response.body)
+                    paths.addAll(pagePaths)
+                    if (pagePaths.size < PAGE_SIZE) break
+                }
+                if (paths.isNotEmpty()) continue
+
                 var offset = 0
                 while (offset <= 500) {
                     val response = runCatching {
@@ -53,11 +76,19 @@ class Insta360TcpClient @Inject constructor() {
 
             TcpProbeResult(
                 connected = true,
-                authorized = auth,
+                authorized = finalAuth,
+                authorizationRequested = requestedAuthorization,
                 files = paths.map { pathToRemoteMedia(normalizedHost, it) },
                 summary = buildString {
                     append("TCP 6666 可连接")
-                    append(if (auth == true) "，授权已通过" else if (auth == false) "，可能需要在相机上确认授权" else "，授权状态未确认")
+                    append(
+                        when {
+                            finalAuth == true -> "，授权已通过"
+                            requestedAuthorization -> "，已请求授权，请在相机屏幕上确认后重试"
+                            finalAuth == false -> "，可能需要在相机上确认授权"
+                            else -> "，授权状态未确认"
+                        },
+                    )
                     append("，发现 ${paths.size} 个媒体路径")
                 },
             )
@@ -72,6 +103,20 @@ class Insta360TcpClient @Inject constructor() {
             hasOne && !hasZero -> true
             hasZero -> false
             else -> null
+        }
+    }
+
+    private data class ExactFileCommand(val seq: Int, val requestId: Int, val body: ByteArray)
+
+    private fun desktopFileListCommands(selector: Int): List<ExactFileCommand> {
+        return if (selector == 2) {
+            listOf(
+                ExactFileCommand(seq = 0x2c, requestId = 8, body = fileListBody(2, 0)),
+                ExactFileCommand(seq = 0x2d, requestId = 9, body = fileListBody(2, 100)),
+                ExactFileCommand(seq = 0x2e, requestId = 10, body = fileListBody(2, 200)),
+            )
+        } else {
+            listOf(ExactFileCommand(seq = 0x2f, requestId = 11, body = fileListBody(3, 0)))
         }
     }
 
@@ -137,10 +182,51 @@ class Insta360TcpClient @Inject constructor() {
             return readUntil(request, TYPE_MSG, timeoutMs)
         }
 
+        fun sendNotify(code: Int, body: ByteArray = ByteArray(0)) {
+            write(ucd2(TYPE_MSG, messageEnvelope(0, code, body)))
+        }
+
         fun sendFile(code: Int, body: ByteArray, timeoutMs: Int = 5000): TcpResponse {
             val request = requestId.getAndIncrement()
             write(fileCommand(code, request, body))
             return readUntil(request, TYPE_FILE, timeoutMs)
+        }
+
+        fun sendExactFile(seq: Int, requestId: Int, code: Int, body: ByteArray, timeoutMs: Int = 5000): TcpResponse {
+            write(fileCommand(code, requestId, body, forcedSeq = seq))
+            this.requestId.set(maxOf(this.requestId.get(), requestId + 1))
+            return readUntil(requestId, TYPE_FILE, timeoutMs)
+        }
+
+        fun bootstrapLikeDesktop() {
+            runCatching {
+                sendExactFile(
+                    seq = 0x25,
+                    requestId = 1,
+                    code = CODE_GET_OPTIONS,
+                    body = getOptionsSmallBody(),
+                    timeoutMs = 4000,
+                )
+            }
+            runCatching {
+                sendExactFile(
+                    seq = 0x26,
+                    requestId = 2,
+                    code = CODE_GET_CURRENT_CAPTURE_STATUS,
+                    body = ByteArray(0),
+                    timeoutMs = 4000,
+                )
+            }
+            runCatching {
+                sendExactFile(
+                    seq = 0x27,
+                    requestId = 3,
+                    code = CODE_GET_OPTIONS,
+                    body = getOptionsLargeBody(),
+                    timeoutMs = 4000,
+                )
+            }
+            requestId.set(maxOf(requestId.get(), 12))
         }
 
         fun write(data: ByteArray) {
@@ -171,7 +257,7 @@ class Insta360TcpClient @Inject constructor() {
             throw java.net.SocketTimeoutException("TCP 命令 $requestId 超时")
         }
 
-        private fun fileCommand(code: Int, requestId: Int, body: ByteArray): ByteArray {
+        private fun fileCommand(code: Int, requestId: Int, body: ByteArray, forcedSeq: Int? = null): ByteArray {
             val raw = ByteBuffer.allocate(9 + body.size).order(ByteOrder.LITTLE_ENDIAN)
             raw.putShort(code.toShort())
             raw.put(0x02)
@@ -179,12 +265,14 @@ class Insta360TcpClient @Inject constructor() {
             raw.putInt(0x8000)
             raw.put(body)
             val length = ByteBuffer.allocate(4).order(ByteOrder.LITTLE_ENDIAN).putInt(raw.array().size).array()
-            val frame = ucd2(TYPE_FILE, length + raw.array())
+            val frame = ucd2(TYPE_FILE, length + raw.array(), forcedSeq)
             return frame + checksumTrailer(frame)
         }
 
-        private fun ucd2(type: Int, payload: ByteArray): ByteArray {
-            return byteArrayOf(0x55, 0x43, 0x44, 0x32, 0x01, 0x0c, type.toByte(), nextSeq().toByte()) + payload
+        private fun ucd2(type: Int, payload: ByteArray, forcedSeq: Int? = null): ByteArray {
+            val selectedSeq = forcedSeq ?: nextSeq()
+            if (forcedSeq != null) seq = maxOf(seq, (forcedSeq + 1) and 0xff)
+            return byteArrayOf(0x55, 0x43, 0x44, 0x32, 0x01, 0x0c, type.toByte(), selectedSeq.toByte()) + payload
         }
 
         private fun nextSeq(): Int {
@@ -275,6 +363,32 @@ class Insta360TcpClient @Inject constructor() {
         return out.toByteArray()
     }
 
+    private fun getOptionsSmallBody(): ByteArray {
+        val out = ByteArrayOutputStream()
+        out.writeVarintField(1, 48)
+        out.writeVarintField(1, 15)
+        out.writeVarintField(1, 11)
+        return out.toByteArray()
+    }
+
+    private fun getOptionsLargeBody(): ByteArray {
+        return """
+            08 01 08 03 08 02 08 4c 08 06 08 4e 08 4f 08 0b 08 55 08 0c
+            08 0d 08 af 01 08 0e 08 0f 08 13 08 37 08 11 08 14 08 1e
+            08 24 08 6e 08 72 08 75 08 59 08 74 08 73 08 25 08 26
+            08 2a 08 28 08 29 08 30 08 31 08 32 08 42 08 84 01 08
+            3a 08 3b 08 3c 08 43 08 44 08 5d 08 53 08 52 08 46 08
+            58 08 67 08 10 08 61 08 85 01 08 86 01 08 77 08 7a 08
+            7b 08 7c 08 80 01 08 81 01 08 87 01 08 96 01 08 95 01
+            08 93 01 08 9b 01 08 9d 01 08 9e 01 08 a0 01 08 b3 01
+            08 a1 01 08 16 08 50 08 51 08 a7 01 08 a9 01 08 ad 01
+            08 b4 01 08 b0 01 08 b1 01 08 78 08 6f 08 79 08 ac 01
+        """.replace(Regex("""\s+"""), "")
+            .chunked(2)
+            .map { it.toInt(16).toByte() }
+            .toByteArray()
+    }
+
     private fun ByteArray.indexOfMagic(start: Int): Int {
         for (i in start..(size - 4)) {
             if (this[i] == 0x55.toByte() && this[i + 1] == 0x43.toByte() && this[i + 2] == 0x44.toByte() && this[i + 3] == 0x32.toByte()) return i
@@ -326,11 +440,16 @@ class Insta360TcpClient @Inject constructor() {
         const val CONTROL_PORT = 6666
         const val CONNECT_TIMEOUT_MS = 1800
         const val READ_TIMEOUT_MS = 4000
+        const val AUTH_TIMEOUT_MS = 30000
         const val PAGE_SIZE = 100
         const val TYPE_MSG = 0x03
         const val TYPE_FILE = 0x04
         const val TYPE_STREAM = 0x05
+        const val CODE_GET_OPTIONS = 8
+        const val CODE_GET_CURRENT_CAPTURE_STATUS = 15
         const val CODE_CHECK_AUTHORIZATION = 39
+        const val CODE_REQUEST_AUTHORIZATION = 86
+        const val CODE_PHONE_INFO = 220
         const val CODE_GET_FILE_LIST = 13
         const val PACKET_CHECKSUM_POLY = 0x04c11db7L
     }

@@ -90,7 +90,8 @@ class DefaultLunaRepository @Inject constructor(
 
     private suspend fun connectRealCamera(): CameraDevice {
         val settings = settingsState.value
-        cameraNetworkHelper.bindProcessToWifi()
+        val wifiBound = cameraNetworkHelper.bindProcessToWifi()
+        val wifiInfo = cameraNetworkHelper.wifiNetworkInfo()
         val hosts = cameraNetworkHelper.cameraHostCandidates(settings.cameraHost)
         val firstHost = hosts.firstOrNull() ?: settings.cameraHost
         deviceState.update {
@@ -119,7 +120,7 @@ class DefaultLunaRepository @Inject constructor(
                 val failed = deviceState.value.copy(connectionStatus = ConnectionStatus.Failed)
                 deviceState.value = failed
                 throw IllegalStateException(
-                    "未检测到相机媒体服务。已尝试 ${hosts.joinToString("、")}。请确认手机已连接 Luna 开头的相机 Wi-Fi，并关闭 WLAN+ / 自动切换网络。\n\n诊断：${diagnostics.joinToString("；")}",
+                    "未检测到相机媒体服务。请确认手机已连接 Luna 开头的相机 Wi-Fi，并关闭 WLAN+ / 自动切换网络。\n\n网络：绑定 Wi-Fi=${if (wifiBound) "成功" else "失败"}，手机IP=${wifiInfo.deviceIp ?: "未知"}，网关=${wifiInfo.gatewayIp ?: "未知"}，DHCP=${wifiInfo.serverIp ?: "未知"}。\n\n已尝试：${hosts.joinToString("、")}。\n\n诊断：${diagnostics.joinToString("；")}",
                 )
             }
             val host = checkNotNull(connectedHost)

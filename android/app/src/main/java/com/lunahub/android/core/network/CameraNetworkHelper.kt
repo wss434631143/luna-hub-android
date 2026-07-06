@@ -16,6 +16,12 @@ import javax.inject.Singleton
 class CameraNetworkHelper @Inject constructor(
     @param:ApplicationContext private val context: Context,
 ) {
+    data class WifiNetworkInfo(
+        val gatewayIp: String?,
+        val serverIp: String?,
+        val deviceIp: String?,
+    )
+
     fun bindProcessToWifi(): Boolean {
         val connectivityManager = context.getSystemService(ConnectivityManager::class.java)
         val wifiNetwork = connectivityManager.allNetworks.firstOrNull { network ->
@@ -34,23 +40,43 @@ class CameraNetworkHelper @Inject constructor(
     }
 
     fun cameraHostCandidates(defaultHost: String): List<String> {
+        val wifiInfo = wifiNetworkInfo()
+        val deviceSubnetGateway = wifiInfo.deviceIp
+            ?.substringBeforeLast('.', missingDelimiterValue = "")
+            ?.takeIf { it.isNotBlank() }
+            ?.let { "$it.1" }
         return listOfNotNull(
-            wifiGatewayIp(),
+            wifiInfo.gatewayIp,
+            wifiInfo.serverIp,
+            deviceSubnetGateway,
             defaultHost,
             "192.168.42.1",
+            "192.168.43.1",
+            "192.168.0.1",
             "192.168.1.1",
+            "192.168.100.1",
+            "172.16.10.1",
+            "10.0.0.1",
         ).map { it.removePrefix("http://").removePrefix("https://").trimEnd('/') }
             .filter { it.isNotBlank() }
             .distinct()
     }
 
-    private fun wifiGatewayIp(): String? {
+    fun wifiNetworkInfo(): WifiNetworkInfo {
         val wifiManager = context.applicationContext.getSystemService(Context.WIFI_SERVICE) as? WifiManager
-        val gateway = wifiManager?.dhcpInfo?.gateway ?: return null
-        if (gateway == 0) return null
+        val dhcpInfo = wifiManager?.dhcpInfo
+        return WifiNetworkInfo(
+            gatewayIp = dhcpInfo?.gateway?.toIpString(),
+            serverIp = dhcpInfo?.serverAddress?.toIpString(),
+            deviceIp = dhcpInfo?.ipAddress?.toIpString(),
+        )
+    }
+
+    private fun Int.toIpString(): String? {
+        if (this == 0) return null
         val bytes = ByteBuffer.allocate(Int.SIZE_BYTES)
             .order(ByteOrder.LITTLE_ENDIAN)
-            .putInt(gateway)
+            .putInt(this)
             .array()
         return bytes.joinToString(".") { byte -> String.format(Locale.US, "%d", byte.toInt() and 0xff) }
     }
