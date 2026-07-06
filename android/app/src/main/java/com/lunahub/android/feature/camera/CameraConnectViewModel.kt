@@ -58,7 +58,7 @@ class CameraConnectViewModel @Inject constructor(
                     isLoading = true,
                     errorMessage = null,
                     wifiHint = if (current.mode == DataSourceMode.Real) {
-                        "正在请求 http://${current.cameraHost}${current.cameraPath}，请确认手机已连接相机 Wi-Fi。"
+                        "正在扫描相机 HTTP 媒体服务和 TCP 6666 控制通道，请确认手机已连接 Luna 开头的相机 Wi-Fi。"
                     } else {
                         "正在使用 mock 数据模拟 Luna / Insta360 相机连接..."
                     },
@@ -96,6 +96,7 @@ class CameraConnectViewModel @Inject constructor(
     private fun defaultHint(mode: DataSourceMode, host: String, path: String): String {
         return if (mode == DataSourceMode.Real) {
             "真实模式会访问 http://$host$path 读取相机目录索引。"
+                .plus(" 如果目录不可用，会继续尝试 Insta360 TCP 控制通道。")
         } else {
             "当前为模拟模式，不会请求真实相机。"
         }

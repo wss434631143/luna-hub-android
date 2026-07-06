@@ -103,9 +103,12 @@ class DefaultLunaRepository @Inject constructor(
             val paths = listOf(settings.cameraPath, "/DCIM/").distinct()
             var connectedHost: String? = null
             var connectedPath: String? = null
+            val diagnostics = mutableListOf<String>()
             hosts.firstOrNull { host ->
                 paths.firstOrNull { path ->
-                    val ok = remoteDataSource.checkStatus(host, path).httpOk
+                    val status = remoteDataSource.checkStatus(host, path)
+                    diagnostics += "$host$path: ${status.message}"
+                    val ok = status.httpOk || (status.controlOk && status.tcpFiles > 0)
                     if (ok) {
                         connectedHost = host
                         connectedPath = path
@@ -115,12 +118,14 @@ class DefaultLunaRepository @Inject constructor(
             } ?: run {
                 val failed = deviceState.value.copy(connectionStatus = ConnectionStatus.Failed)
                 deviceState.value = failed
-                throw IllegalStateException("未检测到相机媒体服务。已尝试 ${hosts.joinToString("、")}。请确认手机已连接 Luna 开头的相机 Wi-Fi，并关闭 WLAN+ / 自动切换网络。")
+                throw IllegalStateException(
+                    "未检测到相机媒体服务。已尝试 ${hosts.joinToString("、")}。请确认手机已连接 Luna 开头的相机 Wi-Fi，并关闭 WLAN+ / 自动切换网络。\n\n诊断：${diagnostics.joinToString("；")}",
+                )
             }
             val host = checkNotNull(connectedHost)
             val path = checkNotNull(connectedPath)
             val status = remoteDataSource.checkStatus(host, path)
-            if (!status.httpOk) {
+            if (!status.httpOk && !status.controlOk) {
                 val failed = deviceState.value.copy(connectionStatus = ConnectionStatus.Failed)
                 deviceState.value = failed
                 throw IllegalStateException(status.message)

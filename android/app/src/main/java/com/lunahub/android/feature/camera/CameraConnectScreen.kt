@@ -95,7 +95,7 @@ private fun CameraConnectScreen(
                         )
                         Spacer(Modifier.height(8.dp))
                         Text(
-                            "目标地址：http://${uiState.cameraHost}${uiState.cameraPath}",
+                            "探测范围：http://${uiState.cameraHost}${uiState.cameraPath}，以及相机 TCP 6666 控制通道。",
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             style = MaterialTheme.typography.bodyMedium,
                         )
