@@ -6,6 +6,7 @@ import com.lunahub.android.domain.model.CameraMedia
 import com.lunahub.android.domain.model.MediaFilter
 import com.lunahub.android.domain.model.MediaType
 import com.lunahub.android.domain.usecase.ObserveCameraMediaUseCase
+import com.lunahub.android.domain.usecase.StartBatchDownloadUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -13,6 +14,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 data class LibraryUiState(
@@ -21,6 +23,7 @@ data class LibraryUiState(
     val filter: MediaFilter = MediaFilter.All,
     val media: List<CameraMedia> = emptyList(),
     val selectedIds: Set<String> = emptySet(),
+    val message: String? = null,
 ) {
     val filteredMedia: List<CameraMedia> = media.filter {
         filter == MediaFilter.All ||
@@ -33,6 +36,7 @@ data class LibraryUiState(
 @HiltViewModel
 class LibraryViewModel @Inject constructor(
     observeCameraMedia: ObserveCameraMediaUseCase,
+    private val startBatchDownload: StartBatchDownloadUseCase,
 ) : ViewModel() {
     private val controls = MutableStateFlow(LibraryUiState())
 
@@ -54,5 +58,14 @@ class LibraryViewModel @Inject constructor(
 
     fun clearSelection() {
         controls.update { it.copy(selectedIds = emptySet()) }
+    }
+
+    fun downloadSelected() {
+        val selected = controls.value.selectedIds
+        if (selected.isEmpty()) return
+        viewModelScope.launch {
+            startBatchDownload(selected)
+            controls.update { it.copy(selectedIds = emptySet(), message = "已加入 ${selected.size} 个下载任务") }
+        }
     }
 }

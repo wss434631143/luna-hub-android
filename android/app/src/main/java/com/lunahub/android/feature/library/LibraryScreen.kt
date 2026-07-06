@@ -44,6 +44,7 @@ fun LibraryRoute(
         },
         onMediaLongClick = { viewModel.toggleSelection(it.id) },
         onClearSelection = viewModel::clearSelection,
+        onDownloadSelected = viewModel::downloadSelected,
     )
 }
 
@@ -54,6 +55,7 @@ private fun LibraryScreen(
     onMediaClick: (CameraMedia) -> Unit,
     onMediaLongClick: (CameraMedia) -> Unit,
     onClearSelection: () -> Unit,
+    onDownloadSelected: () -> Unit,
 ) {
     LunaPage(
         title = if (uiState.selectionMode) "已选择 ${uiState.selectedIds.size} 项" else "相机素材库",
@@ -83,7 +85,14 @@ private fun LibraryScreen(
                 }
                 if (uiState.selectionMode) {
                     Spacer(Modifier.height(10.dp))
-                    LunaPrimaryButton("清除选择", onClearSelection, Modifier.fillMaxWidth())
+                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        LunaPrimaryButton("下载所选", onDownloadSelected, Modifier.weight(1f))
+                        LunaPrimaryButton("清除选择", onClearSelection, Modifier.weight(1f))
+                    }
+                }
+                if (uiState.message != null) {
+                    Spacer(Modifier.height(8.dp))
+                    Text(uiState.message, color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.bodyMedium)
                 }
                 Spacer(Modifier.height(12.dp))
                 val groups = uiState.filteredMedia.groupBy { it.createdAt.formatDate() }

@@ -17,6 +17,7 @@ enum class DownloadStatus {
     Downloading,
     Success,
     Failed,
+    Canceled,
 }
 
 enum class ThemeMode {

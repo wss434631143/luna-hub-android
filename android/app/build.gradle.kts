@@ -62,11 +62,14 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.9.4")
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.9.4")
     implementation("androidx.navigation:navigation-compose:2.9.4")
+    implementation("androidx.room:room-ktx:2.8.1")
+    implementation("androidx.room:room-runtime:2.8.1")
     implementation("com.google.dagger:hilt-android:2.57.2")
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
     implementation("com.squareup.retrofit2:retrofit:2.11.0")
 
     kapt("com.google.dagger:hilt-compiler:2.57.2")
+    kapt("androidx.room:room-compiler:2.8.1")
 
     debugImplementation("androidx.compose.ui:ui-tooling")
     debugImplementation("androidx.compose.ui:ui-test-manifest")

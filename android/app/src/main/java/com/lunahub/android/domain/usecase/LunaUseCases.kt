@@ -3,6 +3,7 @@ package com.lunahub.android.domain.usecase
 import com.lunahub.android.domain.model.CameraDevice
 import com.lunahub.android.domain.model.CameraMedia
 import com.lunahub.android.domain.model.DataSourceMode
+import com.lunahub.android.domain.repository.DownloadRepository
 import com.lunahub.android.domain.repository.LunaRepository
 import javax.inject.Inject
 
@@ -19,7 +20,7 @@ class ObserveCameraMediaUseCase @Inject constructor(
 }
 
 class ObserveDownloadsUseCase @Inject constructor(
-    private val repository: LunaRepository,
+    private val repository: DownloadRepository,
 ) {
     operator fun invoke() = repository.downloads
 }
@@ -43,9 +44,27 @@ class GetMediaUseCase @Inject constructor(
 }
 
 class StartDownloadUseCase @Inject constructor(
-    private val repository: LunaRepository,
+    private val repository: DownloadRepository,
 ) {
-    suspend operator fun invoke(mediaId: String) = repository.startMockDownload(mediaId)
+    suspend operator fun invoke(mediaId: String) = repository.startDownload(mediaId)
+}
+
+class StartBatchDownloadUseCase @Inject constructor(
+    private val repository: DownloadRepository,
+) {
+    suspend operator fun invoke(mediaIds: Collection<String>) = repository.startDownloads(mediaIds)
+}
+
+class RetryDownloadUseCase @Inject constructor(
+    private val repository: DownloadRepository,
+) {
+    suspend operator fun invoke(taskId: String) = repository.retryDownload(taskId)
+}
+
+class CancelDownloadUseCase @Inject constructor(
+    private val repository: DownloadRepository,
+) {
+    suspend operator fun invoke(taskId: String) = repository.cancelDownload(taskId)
 }
 
 class ClearCacheUseCase @Inject constructor(

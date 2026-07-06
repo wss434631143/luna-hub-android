@@ -29,6 +29,7 @@ import com.lunahub.android.core.design.LunaEmptyState
 import com.lunahub.android.core.design.LunaErrorState
 import com.lunahub.android.core.design.LunaLoadingState
 import com.lunahub.android.core.design.LunaPage
+import com.lunahub.android.core.design.LunaSecondaryButton
 import com.lunahub.android.core.design.LunaSpacing
 import com.lunahub.android.core.util.formatBytes
 import com.lunahub.android.domain.model.DownloadStatus
@@ -37,11 +38,15 @@ import com.lunahub.android.domain.model.DownloadTask
 @Composable
 fun DownloadRoute(viewModel: DownloadViewModel = hiltViewModel()) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    DownloadScreen(uiState)
+    DownloadScreen(uiState, viewModel::retry, viewModel::cancel)
 }
 
 @Composable
-private fun DownloadScreen(uiState: DownloadUiState) {
+private fun DownloadScreen(
+    uiState: DownloadUiState,
+    onRetry: (String) -> Unit,
+    onCancel: (String) -> Unit,
+) {
     LunaPage(title = "下载任务", subtitle = "查看素材保存进度与失败原因") {
         when {
             uiState.isLoading -> LunaLoadingState("正在读取下载队列")
@@ -52,7 +57,7 @@ private fun DownloadScreen(uiState: DownloadUiState) {
                 verticalArrangement = Arrangement.spacedBy(LunaSpacing.SectionGap),
             ) {
                 items(uiState.tasks, key = { it.id }) { task ->
-                    DownloadTaskCard(task)
+                    DownloadTaskCard(task, onRetry, onCancel)
                 }
             }
         }
@@ -60,7 +65,11 @@ private fun DownloadScreen(uiState: DownloadUiState) {
 }
 
 @Composable
-private fun DownloadTaskCard(task: DownloadTask) {
+private fun DownloadTaskCard(
+    task: DownloadTask,
+    onRetry: (String) -> Unit,
+    onCancel: (String) -> Unit,
+) {
     val icon: ImageVector = when (task.status) {
         DownloadStatus.Success -> Icons.Outlined.CheckCircle
         DownloadStatus.Failed -> Icons.Outlined.ErrorOutline
@@ -77,6 +86,7 @@ private fun DownloadTaskCard(task: DownloadTask) {
                         DownloadStatus.Downloading -> "下载中 ${task.speed.formatBytes()}/s"
                         DownloadStatus.Success -> task.localPath ?: "已完成"
                         DownloadStatus.Failed -> task.errorMessage ?: "失败"
+                        DownloadStatus.Canceled -> "已取消"
                     },
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     style = MaterialTheme.typography.bodyMedium,
@@ -86,5 +96,16 @@ private fun DownloadTaskCard(task: DownloadTask) {
         }
         Spacer(Modifier.height(12.dp))
         LinearProgressIndicator(progress = { task.progress }, modifier = Modifier.fillMaxWidth())
+        if (task.status == DownloadStatus.Failed || task.status == DownloadStatus.Canceled || task.status == DownloadStatus.Downloading || task.status == DownloadStatus.Queued) {
+            Spacer(Modifier.height(12.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                if (task.status == DownloadStatus.Failed || task.status == DownloadStatus.Canceled) {
+                    LunaSecondaryButton("重试", { onRetry(task.id) }, Modifier.weight(1f))
+                }
+                if (task.status == DownloadStatus.Downloading || task.status == DownloadStatus.Queued) {
+                    LunaSecondaryButton("取消", { onCancel(task.id) }, Modifier.weight(1f))
+                }
+            }
+        }
     }
 }
